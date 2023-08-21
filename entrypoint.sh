@@ -1,5 +1,12 @@
 #!/bin/sh
 
+
+#health check
+
+while ! mysqladmin ping -h mysql -uroot -prootpass --silent; do
+    sleep 2
+done
+
 java -Xms64m -Xmx128m \
      -Ddatasource.dialect="${DB_DIALECT}" \
      -Ddatasource.url="${DB_URL}" \

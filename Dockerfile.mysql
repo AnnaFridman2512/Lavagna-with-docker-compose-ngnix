@@ -1,0 +1,38 @@
+# Start from the maven image for building the application
+FROM maven:3.8-jdk-8 as builder
+
+# Copy current directory (which should contain the Lavagna source code) into the container
+COPY . /app
+
+# Switch to the app directory
+WORKDIR /app
+
+# Build the Lavagna project using Maven
+RUN mvn clean install
+
+# Now, for the final stage, use the lightweight Java 8 runtime, as in the demo Dockerfile
+FROM openjdk:8-jre-alpine
+
+# Expose the port 8080 for Lavagna
+EXPOSE 8080
+
+# Set the environment variables for MySQL
+ENV DB_DIALECT MYSQL
+ENV DB_URL jdbc:mysql://mysql:3306/lavagna?autoReconnect=true&useSSL=false
+ENV DB_USER root
+ENV DB_PASS rootpass
+ENV SPRING_PROFILE dev
+
+# Install certificates and the MySQL client tools
+RUN apk update && apk add ca-certificates openssl mysql-client && \
+    update-ca-certificates
+
+# Copy the built .war file from the builder stage
+COPY --from=builder /app/target/lavagna-jetty-console.war /target/lavagna-jetty-console.war
+
+# Add the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set the entry point for the Docker container
+ENTRYPOINT ["/entrypoint.sh"]
